@@ -1,0 +1,14 @@
+import { validate, syntax, suggest } from "./core.js";
+import assert from "node:assert";
+const mock = (mxs) => async (url) => ({ json: async () => { const d = new URL(url).searchParams.get("name"); return mxs[d] ? { Status: 0, Answer: [{ type: 15, data: "10 " + mxs[d] }] } : { Status: 3 }; } });
+const f = mock({ "gmail.com": "gmail-smtp-in.l.google.com.", "mailinator.com": "mx.mailinator.com." });
+const D = new Set(["mailinator.com"]);
+assert.equal(syntax("bad@@x"), null); assert.equal(syntax("a b@x.com"), null); assert.ok(syntax("a.b@x.co"));
+assert.equal(suggest("gmai.com"), "gmail.com");
+let r = await validate("john@gmail.com", D, f); assert.equal(r.deliverable, "deliverable"); assert.ok(r.free_provider);
+r = await validate("john@gmai.com", D, f); assert.equal(r.did_you_mean, "john@gmail.com");
+r = await validate("x@mailinator.com", D, f); assert.ok(r.disposable); assert.equal(r.deliverable, "risky");
+r = await validate("info@gmail.com", D, f); assert.ok(r.role_account);
+r = await validate("nope", D, f); assert.equal(r.valid_syntax, false);
+r = await validate("a@nonexistent-zz.com", D, f); assert.equal(r.mx_found, false);
+console.log("all tests pass");
